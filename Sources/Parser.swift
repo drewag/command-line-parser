@@ -32,13 +32,15 @@ public class Parser {
                     guard !promise.isOptional else {
                         return
                     }
-                    throw self.generateUsage()
+                    throw self.generateUsageError()
                 }
 
-                promise.parse(string: self.arguments[index + 1])
+                guard promise.parse(string: self.arguments[index + 1]) else {
+                    throw ParseError(description: "Failed to parse \(promise.name)\n\(self.generateUsage())")
+                }
             case .commands(let commands):
                 guard index + 1 < arguments.count else {
-                    throw self.generateUsage()
+                    throw self.generateUsageError()
                 }
 
                 for command in commands {
@@ -52,7 +54,7 @@ public class Parser {
                         return
                     }
                 }
-                throw self.generateUsage()
+                throw self.generateUsageError()
             }
         }
     }
@@ -131,7 +133,7 @@ public class Parser {
 }
 
 private extension Parser {
-    func generateUsage() -> ParseError {
+    func generateUsage() -> String {
         var usage = "Usage: \(self.arguments[0])"
         for spec in self.specs {
             switch spec {
@@ -146,7 +148,11 @@ private extension Parser {
                 usage += " " + commands.map({$0.name}).joined(separator: "|")
             }
         }
-        return ParseError(description: usage)
+        return usage
+    }
+
+    func generateUsageError() -> ParseError {
+        return ParseError(description: self.generateUsage())
     }
 
     var hasOptionalPromise: Bool {

@@ -24,7 +24,7 @@ public class OptionalParsePromise<Value: ParsableType> {
 
 protocol InternalParsePromise {
     var name: String {get}
-    func parse(string: String)
+    func parse(string: String) -> Bool
     var isOptional: Bool {get}
 }
 
@@ -36,8 +36,9 @@ class ConcreteParsePromise<Value: ParsableType>: ParsePromise<Value>, InternalPa
         self.name = name
     }
 
-    func parse(string: String) {
+    func parse(string: String) -> Bool {
         self.value = Value(parse: string)
+        return self.value != nil
     }
 
     override var parsedValue: Value {
@@ -57,8 +58,9 @@ class ConcreteOptionalParsePromise<Value: ParsableType>: OptionalParsePromise<Va
         self.name = name
     }
 
-    func parse(string: String) {
+    func parse(string: String) -> Bool {
         self.value = Value(parse: string)
+        return self.value != nil
     }
 
     override var parsedValue: Value? {
