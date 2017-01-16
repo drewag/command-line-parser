@@ -46,7 +46,7 @@ public class Parser {
                 for command in commands {
                     if command.name == self.arguments[index + 1] {
                         let commandCall = self.arguments[0 ... index + 1].joined(separator: " ")
-                        let remainingArguments = self.arguments[index + 1 ..< self.arguments.count]
+                        let remainingArguments = self.arguments[index + 2 ..< self.arguments.count]
 
                         let parser = Parser(arguments: [commandCall] + remainingArguments)
                         try command.handler(parser)
