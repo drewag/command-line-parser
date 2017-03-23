@@ -26,17 +26,37 @@ public class Parser {
     }
 
     let arguments: [String]
+    let shortOptions: [Character]
+    let longOptions: [String]
 
     fileprivate let command: Command?
     var specs = [Spec]()
 
-    private init(arguments: [String], command: Command?) {
-        self.arguments = arguments
+    private init(arguments: [String], shortOptions: [Character], longOptions: [String], command: Command?) {
+        var finalArguments = [String]()
+        var shortOptions = shortOptions
+        var longOptions = longOptions
+        for argument in arguments {
+            if argument.hasPrefix("--") {
+                longOptions.append(argument.substring(from: argument.index(argument.startIndex, offsetBy: 2)))
+            }
+            else if argument.hasPrefix("-") {
+                let source = argument.substring(from: argument.index(argument.startIndex, offsetBy: 1))
+                shortOptions += source.characters
+            }
+            else {
+                finalArguments.append(argument)
+            }
+        }
+        self.arguments = finalArguments
+        self.shortOptions = shortOptions
+        self.longOptions = longOptions
+
         self.command = command
     }
 
     public convenience init(arguments: [String]) {
-        self.init(arguments: arguments, command: nil)
+        self.init(arguments: arguments, shortOptions: [], longOptions: [], command: nil)
     }
 
     public func parse() throws {
@@ -45,7 +65,7 @@ public class Parser {
             case .promise(let promise):
                 guard index + 1 < arguments.count else {
                     guard !promise.isOptional else {
-                        return
+                        break
                     }
                     throw self.generateUsageError()
                 }
@@ -63,7 +83,12 @@ public class Parser {
                         let commandCall = self.arguments[0 ... index + 1].joined(separator: " ")
                         let remainingArguments = self.arguments[index + 2 ..< self.arguments.count]
 
-                        let parser = Parser(arguments: [commandCall] + remainingArguments, command: command)
+                        let parser = Parser(
+                            arguments: [commandCall] + remainingArguments,
+                            shortOptions: self.shortOptions,
+                            longOptions: self.longOptions,
+                            command: command
+                        )
                         try command.handler(parser)
 
                         return
@@ -71,6 +96,10 @@ public class Parser {
                 }
                 throw self.generateUsageError()
             }
+        }
+
+        if self.shortOptions.contains("h") || self.longOptions.contains("help") {
+            throw self.generateUsageError()
         }
     }
 
