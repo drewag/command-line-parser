@@ -6,6 +6,8 @@
 //
 //
 
+import Foundation
+
 public protocol ParsableType {
     init?(parse: String)
 }
@@ -19,5 +21,11 @@ extension String: ParsableType {
 extension Int: ParsableType {
     public init?(parse: String) {
         self.init(parse)
+    }
+}
+
+extension URL: ParsableType {
+    public init?(parse: String) {
+        self.init(string: parse)
     }
 }

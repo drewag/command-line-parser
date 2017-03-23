@@ -6,8 +6,17 @@
 //
 //
 
+import Foundation
+
 public struct ParseError: Error, CustomStringConvertible {
     public let description: String
+}
+
+public protocol CommandHandler {
+    static var name: String {get}
+    static var shortDescription: String? {get}
+    static var longDescription: String? {get}
+    static func handler(parser: Parser) throws
 }
 
 public class Parser {
@@ -18,10 +27,16 @@ public class Parser {
 
     let arguments: [String]
 
+    fileprivate let command: Command?
     var specs = [Spec]()
 
-    public init(arguments: [String]) {
+    private init(arguments: [String], command: Command?) {
         self.arguments = arguments
+        self.command = command
+    }
+
+    public convenience init(arguments: [String]) {
+        self.init(arguments: arguments, command: nil)
     }
 
     public func parse() throws {
@@ -48,7 +63,7 @@ public class Parser {
                         let commandCall = self.arguments[0 ... index + 1].joined(separator: " ")
                         let remainingArguments = self.arguments[index + 2 ..< self.arguments.count]
 
-                        let parser = Parser(arguments: [commandCall] + remainingArguments)
+                        let parser = Parser(arguments: [commandCall] + remainingArguments, command: command)
                         try command.handler(parser)
 
                         return
@@ -89,6 +104,21 @@ public class Parser {
         return promise
     }
 
+    public func url(named: String) -> ParsePromise<URL> {
+        guard !self.hasOptionalPromise else {
+            fatalError("Cannot specify required argument after optional argument")
+        }
+        guard !self.hasCommand else {
+            fatalError("Cannot specify argument after command. Instead add them to command parser.")
+        }
+
+        let promise = ConcreteParsePromise<URL>(name: named)
+
+        self.specs.append(.promise(promise))
+
+        return promise
+    }
+
     public func optionalString(named: String) -> OptionalParsePromise<String> {
         guard !self.hasCommand else {
             fatalError("Cannot specify argument after command. Instead add them to command parser.")
@@ -113,8 +143,8 @@ public class Parser {
         return promise
     }
 
-    public func command(named: String, handler: @escaping (Parser) throws -> ()) {
-        let command = Command(name: named, handler: handler)
+    public func command(named: String, shortDescription: String? = nil, longDescription: String? = nil, handler: @escaping (Parser) throws -> ()) {
+        let command = Command(name: named, shortDescription: shortDescription, longDescription: longDescription, handler: handler)
 
         guard let lastSpec = self.specs.last else {
             self.specs.append(.commands([command]))
@@ -130,11 +160,22 @@ public class Parser {
             self.specs.append(.commands([command]))
         }
     }
+
+    public func command<Handler: CommandHandler>(_ handler: Handler.Type) {
+        self.command(named: handler.name, shortDescription: handler.shortDescription, longDescription: handler.longDescription, handler: handler.handler)
+    }
 }
 
 private extension Parser {
     func generateUsage() -> String {
         var usage = "Usage: \(self.arguments[0])"
+
+        func addDescription() {
+            if let description = self.command?.longDescription ?? self.command?.shortDescription {
+                usage += "\n\(description)\n"
+            }
+        }
+
         for spec in self.specs {
             switch spec {
             case .promise(let promise):
@@ -145,9 +186,24 @@ private extension Parser {
                     usage += " <\(promise.name)>"
                 }
             case .commands(let commands):
-                usage += " " + commands.map({$0.name}).joined(separator: "|")
+                usage += " <command>\n"
+                addDescription()
+                usage += "\nThe following commands are available:\n"
+                let maxNameLength = commands.map({$0.name.characters.count}).max() ?? 0
+                for command in commands {
+                    usage += "\n"
+                    usage += "    \(command.name.padding(toLength: maxNameLength + 4, withPad: " ", startingAt: 0))"
+                    if let description = command.shortDescription {
+                        usage += "\(description)"
+                    }
+                }
+                usage += "\n"
+                return usage
             }
         }
+
+        usage += "\n"
+        addDescription()
         return usage
     }
 
