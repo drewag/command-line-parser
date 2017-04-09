@@ -31,8 +31,9 @@ public class Parser {
 
     fileprivate let command: Command?
     var specs = [Spec]()
+    var optionPromises: [OptionPromise]
 
-    private init(arguments: [String], shortOptions: [Character], longOptions: [String], command: Command?) {
+    private init(arguments: [String], shortOptions: [Character], longOptions: [String], optionPromises: [OptionPromise], command: Command?) {
         var finalArguments = [String]()
         var shortOptions = shortOptions
         var longOptions = longOptions
@@ -53,13 +54,21 @@ public class Parser {
         self.longOptions = longOptions
 
         self.command = command
+        self.optionPromises = optionPromises
     }
 
     public convenience init(arguments: [String]) {
-        self.init(arguments: arguments, shortOptions: [], longOptions: [], command: nil)
+        self.init(arguments: arguments, shortOptions: [], longOptions: [], optionPromises: [], command: nil)
     }
 
     public func parse() throws {
+        for option in self.optionPromises {
+            guard self.longOptions.contains(option.name) || (option.abbreviation != nil && self.shortOptions.contains(option.abbreviation!)) else {
+                continue
+            }
+            option.wasPresent = true
+        }
+
         for (index, spec) in self.specs.enumerated() {
             switch spec {
             case .promise(let promise):
@@ -87,6 +96,7 @@ public class Parser {
                             arguments: [commandCall] + remainingArguments,
                             shortOptions: self.shortOptions,
                             longOptions: self.longOptions,
+                            optionPromises: self.optionPromises,
                             command: command
                         )
                         try command.handler(parser)
@@ -101,6 +111,12 @@ public class Parser {
         if self.shortOptions.contains("h") || self.longOptions.contains("help") {
             throw self.generateUsageError()
         }
+    }
+
+    public func option(named: String, abbreviatedWith character: Character? = nil) -> OptionPromise {
+        let promise = OptionPromise(name: named, abbreviation: character)
+        self.optionPromises.append(promise)
+        return promise
     }
 
     public func string(named: String) -> ParsePromise<String> {
@@ -205,6 +221,10 @@ private extension Parser {
             }
         }
 
+        for option in self.optionPromises {
+            usage += " [--\(option.name)]"
+        }
+
         for spec in self.specs {
             switch spec {
             case .promise(let promise):
@@ -253,7 +273,7 @@ private extension Parser {
         }
         return false
     }
-
+    
     var hasCommand: Bool {
         for spec in self.specs {
             switch spec {
