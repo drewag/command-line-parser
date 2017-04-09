@@ -61,7 +61,7 @@ public class Parser {
         self.init(arguments: arguments, shortOptions: [], longOptions: [], optionPromises: [], command: nil)
     }
 
-    public func parse() throws {
+    public func parse(beforeExecute: (() -> ())? = nil) throws {
         for option in self.optionPromises {
             guard self.longOptions.contains(option.name) || (option.abbreviation != nil && self.shortOptions.contains(option.abbreviation!)) else {
                 continue
@@ -99,6 +99,7 @@ public class Parser {
                             optionPromises: self.optionPromises,
                             command: command
                         )
+                        beforeExecute?()
                         try command.handler(parser)
 
                         return
