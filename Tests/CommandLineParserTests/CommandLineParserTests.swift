@@ -1,5 +1,5 @@
 import XCTest
-import command_line_parser
+import CommandLineParser
 
 class command_line_parserTests: XCTestCase {
     func testSimpleArguments() throws {
@@ -30,7 +30,7 @@ class command_line_parserTests: XCTestCase {
             usage = "\(error)"
         }
 
-        XCTAssertEqual(usage, "Usage: command <argument 1> <argument 2> [argument 3]")
+        XCTAssertEqual(usage, "Usage: command <argument 1> <argument 2> [argument 3]\n")
     }
 
     func testCommandUsageGeneration() {
@@ -59,7 +59,7 @@ class command_line_parserTests: XCTestCase {
             usage = "\(error)"
         }
 
-        XCTAssertEqual(usage, "Usage: command command1|command2")
+        XCTAssertEqual(usage, "Usage: command <command>\n\nThe following commands are available:\n\n    command1    \n    command2    \n")
     }
 
     func testSpecificCommandUsageGeneration() {
@@ -88,7 +88,7 @@ class command_line_parserTests: XCTestCase {
             usage = "\(error)"
         }
 
-        XCTAssertEqual(usage, "Usage: command command1 <argument 1> <argument 2> [argument 3]")
+        XCTAssertEqual(usage, "Usage: command command1 <argument 1> <argument 2> [argument 3]\n")
     }
 
     func testUsedOptionalArgument() throws {
