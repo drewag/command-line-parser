@@ -43,7 +43,7 @@ public class Parser {
             }
             else if argument.hasPrefix("-") {
                 let source = argument.substring(from: argument.index(argument.startIndex, offsetBy: 1))
-                shortOptions += source.characters
+                shortOptions += source
             }
             else {
                 finalArguments.append(argument)
@@ -239,7 +239,7 @@ private extension Parser {
                 usage += " <command>\n"
                 addDescription()
                 usage += "\nThe following commands are available:\n"
-                let maxNameLength = commands.map({$0.name.characters.count}).max() ?? 0
+                let maxNameLength = commands.map({$0.name.count}).max() ?? 0
                 for command in commands {
                     usage += "\n"
                     usage += "    \(command.name.padding(toLength: maxNameLength + 4, withPad: " ", startingAt: 0))"
