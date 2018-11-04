@@ -39,10 +39,10 @@ public class Parser {
         var longOptions = longOptions
         for argument in arguments {
             if argument.hasPrefix("--") {
-                longOptions.append(argument.substring(from: argument.index(argument.startIndex, offsetBy: 2)))
+                longOptions.append(String(argument[argument.index(argument.startIndex, offsetBy: 2)...]))
             }
             else if argument.hasPrefix("-") {
-                let source = argument.substring(from: argument.index(argument.startIndex, offsetBy: 1))
+                let source = argument[argument.index(argument.startIndex, offsetBy: 1)...]
                 shortOptions += source
             }
             else {
