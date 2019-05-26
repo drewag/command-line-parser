@@ -79,8 +79,8 @@ public class Parser {
                     throw self.generateUsageError()
                 }
 
-                guard promise.parse(string: self.arguments[index + 1]) else {
-                    throw ParseError(description: "Failed to parse \(promise.name)\n\(self.generateUsage())")
+                if let error = promise.parse(string: self.arguments[index + 1]) {
+                    throw ParseError(description: "Failed to parse \(promise.name)\n\(error)\n\n\(self.generateUsage())")
                 }
             case .commands(let commands):
                 guard index + 1 < arguments.count else {
@@ -120,75 +120,6 @@ public class Parser {
         return promise
     }
 
-    public func string(named: String) -> ParsePromise<String> {
-        guard !self.hasOptionalPromise else {
-            fatalError("Cannot specify required argument after optional argument")
-        }
-        guard !self.hasCommand else {
-            fatalError("Cannot specify argument after command. Instead add them to command parser.")
-        }
-
-        let promise = ConcreteParsePromise<String>(name: named)
-
-        self.specs.append(.promise(promise))
-
-        return promise
-    }
-
-    public func int(named: String) -> ParsePromise<Int> {
-        guard !self.hasOptionalPromise else {
-            fatalError("Cannot specify required argument after optional argument")
-        }
-        guard !self.hasCommand else {
-            fatalError("Cannot specify argument after command. Instead add them to command parser.")
-        }
-
-        let promise = ConcreteParsePromise<Int>(name: named)
-
-        self.specs.append(.promise(promise))
-
-        return promise
-    }
-
-    public func url(named: String) -> ParsePromise<URL> {
-        guard !self.hasOptionalPromise else {
-            fatalError("Cannot specify required argument after optional argument")
-        }
-        guard !self.hasCommand else {
-            fatalError("Cannot specify argument after command. Instead add them to command parser.")
-        }
-
-        let promise = ConcreteParsePromise<URL>(name: named)
-
-        self.specs.append(.promise(promise))
-
-        return promise
-    }
-
-    public func optionalString(named: String) -> OptionalParsePromise<String> {
-        guard !self.hasCommand else {
-            fatalError("Cannot specify argument after command. Instead add them to command parser.")
-        }
-
-        let promise = ConcreteOptionalParsePromise<String>(name: named)
-
-        self.specs.append(.promise(promise))
-
-        return promise
-    }
-
-    public func optionalInt(named: String) -> OptionalParsePromise<Int> {
-        guard !self.hasCommand else {
-            fatalError("Cannot specify argument after command. Instead add them to command parser.")
-        }
-
-        let promise = ConcreteOptionalParsePromise<Int>(name: named)
-
-        self.specs.append(.promise(promise))
-
-        return promise
-    }
-
     public func command(named: String, shortDescription: String? = nil, longDescription: String? = nil, handler: @escaping (Parser) throws -> ()) {
         let command = Command(name: named, shortDescription: shortDescription, longDescription: longDescription, handler: handler)
 
@@ -209,6 +140,36 @@ public class Parser {
 
     public func command<Handler: CommandHandler>(_ handler: Handler.Type) {
         self.command(named: handler.name, shortDescription: handler.shortDescription, longDescription: handler.longDescription, handler: handler.handler)
+    }
+}
+
+// MARK: Internal
+
+extension Parser {
+    var hasOptionalPromise: Bool {
+        for spec in self.specs {
+            switch spec {
+            case .promise(let promise):
+                if promise.isOptional {
+                    return true
+                }
+            case .commands:
+                break
+            }
+        }
+        return false
+    }
+
+    var hasCommand: Bool {
+        for spec in self.specs {
+            switch spec {
+            case .promise:
+                break
+            case .commands:
+                return true
+            }
+        }
+        return false
     }
 }
 
@@ -259,31 +220,5 @@ private extension Parser {
 
     func generateUsageError() -> ParseError {
         return ParseError(description: self.generateUsage())
-    }
-
-    var hasOptionalPromise: Bool {
-        for spec in self.specs {
-            switch spec {
-            case .promise(let promise):
-                if promise.isOptional {
-                    return true
-                }
-            case .commands:
-                break
-            }
-        }
-        return false
-    }
-    
-    var hasCommand: Bool {
-        for spec in self.specs {
-            switch spec {
-            case .promise:
-                break
-            case .commands:
-                return true
-            }
-        }
-        return false
     }
 }

@@ -8,6 +8,7 @@
 
 public class ParsePromise<Value: ParsableType> {
     let isOptional = false
+    var validate: ((Value) -> String?)?
 
     public var parsedValue: Value {
         fatalError()
@@ -16,6 +17,7 @@ public class ParsePromise<Value: ParsableType> {
 
 public class OptionalParsePromise<Value: ParsableType> {
     let isOptional = true
+    var validate: ((Value) -> String?)?
 
     public var parsedValue: Value? {
         fatalError()
@@ -24,7 +26,7 @@ public class OptionalParsePromise<Value: ParsableType> {
 
 protocol InternalParsePromise {
     var name: String {get}
-    func parse(string: String) -> Bool
+    func parse(string: String) -> String?
     var isOptional: Bool {get}
 }
 
@@ -36,9 +38,12 @@ class ConcreteParsePromise<Value: ParsableType>: ParsePromise<Value>, InternalPa
         self.name = name
     }
 
-    func parse(string: String) -> Bool {
+    func parse(string: String) -> String? {
         self.value = Value(parse: string)
-        return self.value != nil
+        guard let value = self.value else {
+            return "it is invalid"
+        }
+        return self.validate?(value)
     }
 
     override var parsedValue: Value {
@@ -58,9 +63,12 @@ class ConcreteOptionalParsePromise<Value: ParsableType>: OptionalParsePromise<Va
         self.name = name
     }
 
-    func parse(string: String) -> Bool {
+    func parse(string: String) -> String? {
         self.value = Value(parse: string)
-        return self.value != nil
+        guard let value = self.value else {
+            return "it is invalid"
+        }
+        return self.validate?(value)
     }
 
     override var parsedValue: Value? {
